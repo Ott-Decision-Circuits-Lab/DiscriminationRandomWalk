@@ -360,10 +360,19 @@ switch Action
 
         %% Trial rate
         if TaskParameters.GUI.ShowTrialRate
-            TrialStarts = BpodSystem.Data.TrialStartTimestamp;
-            RelativeStartsMinutes = (TrialStarts - min(TrialStarts)) / 60;
-            BpodSystem.GUIHandles.OutcomePlot.TrialRate.XData = RelativeStartsMinutes;
-            BpodSystem.GUIHandles.OutcomePlot.TrialRate.YData = 1:numel(LeftChoices);
+            % Only count trials where a choice was made (ChoiceLeft is not NaN)
+            CompletedTrials = ~isnan(LeftChoices);
+            TrialStarts = BpodSystem.Data.TrialStartTimestamp(CompletedTrials);
+            
+            if ~isempty(TrialStarts)
+                RelativeStartsMinutes = (TrialStarts - min(TrialStarts)) / 60;
+                BpodSystem.GUIHandles.OutcomePlot.TrialRate.XData = RelativeStartsMinutes;
+                BpodSystem.GUIHandles.OutcomePlot.TrialRate.YData = 1:numel(TrialStarts);
+            else
+                % Reset plot if no completed trials yet
+                BpodSystem.GUIHandles.OutcomePlot.TrialRate.XData = 0;
+                BpodSystem.GUIHandles.OutcomePlot.TrialRate.YData = 0;
+            end
         end
 
         if TaskParameters.GUI.ShowFix
