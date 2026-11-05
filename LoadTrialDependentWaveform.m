@@ -16,19 +16,16 @@ if ~BpodSystem.EmulatorMode
     fs = Player.SamplingRate;
     
     if TaskParameters.GUI.AuditoryStimulusType == 1  % Click task
-        % Get current block bias from TrialData
+        % Get current random walk bias from TrialData
         if isfield(BpodSystem.Data.Custom, 'TrialData') && ...
-           isfield(BpodSystem.Data.Custom.TrialData, 'BlockNumber') && ...
-           iTrial <= length(BpodSystem.Data.Custom.TrialData.BlockNumber)
-            currentBlock = BpodSystem.Data.Custom.TrialData.BlockNumber(iTrial);
+           isfield(BpodSystem.Data.Custom.TrialData, 'AudBias') && ...
+           iTrial <= length(BpodSystem.Data.Custom.TrialData.AudBias)
+            CurrentAudBias = BpodSystem.Data.Custom.TrialData.AudBias(iTrial);
         else
-            currentBlock = 1;  % Fallback
+            CurrentAudBias = 0.5;  % Fallback to unbiased
         end
 
-        BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == currentBlock;
-        CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);
-
-        % Generate click trains with block bias
+        % Generate click trains with random walk bias
         TotalClicks = TaskParameters.GUI.SumRates;
         [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, fs, ClickLength, SoundLevel, 'biasedUniform', CurrentAudBias, TotalClicks);
 

@@ -1,5 +1,6 @@
-function DiscriminationBlocks
-% 2-AFC olfactory and auditory discrimination task implented for Bpod 
+function DiscriminationRandomWalk
+% 2-AFC olfactory and auditory discrimination task with Ornstein-Uhlenbeck
+% random walk bias, implemented for Bpod 
 % (https://github.com/Ott-Decision-Circuits-Lab/Bpod_Gen2)
 
 global BpodSystem
@@ -22,8 +23,6 @@ if ~BpodSystem.EmulatorMode
         end
         LoadIndependentWaveform(Player);
         LoadTriggerProfileMatrix(Player);
-        % SoundChannels = [3];  % Array of channels for each sound: play on left (1), right (2), or both (3)
-        % LoadSoundMessages(SoundChannels);
     end
 end
 BpodSystem.Data.Custom.SessionMeta.OlfactometerStartup = false;
@@ -60,13 +59,12 @@ while RunSession
     ClickLength = 2;
     if BpodSystem.EmulatorMode
         % EMULATOR MODE: Generate click trains dynamically
-        % Fetch current block's auditory bias from TrialData
-        BlockTableMask = BpodSystem.Data.Custom.TrialData.BlockTableMask;
-        BlockBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);  % Get auditory bias from block struct defined by InitializeCustomDataFields.m
+        % Fetch current random walk bias from TrialData
+        CurrentAudBias = BpodSystem.Data.Custom.TrialData.AudBias(iTrial);
         TotalClicks = TaskParameters.GUI.SumRates;
-        [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, 25000, ClickLength, SoundLevel, 'beta', BlockBias, TotalClicks);
+        [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, 25000, ClickLength, SoundLevel, 'biasedUniform', CurrentAudBias, TotalClicks);
     else
-        LoadTrialDependentWaveform(Player, iTrial, SoundLevel, ClickLength); % Load white noise, stimuli trains, and error sound to wave player if not EmulatorMode
+        LoadTrialDependentWaveform(Player, iTrial, SoundLevel, ClickLength);
         InitiateOlfactometer(iTrial);
         InitiatePsychtoolbox(iTrial);
     end
@@ -94,8 +92,7 @@ while RunSession
         else
             Nidaq2Data=[];
         end
-        % save separately per trial (too large/slow to save entire history to disk)
-        if BpodSystem.Status.BeingUsed ~= 0 %only when bpod still active (due to how bpod stops a protocol this would be run again after the last trial)
+        if BpodSystem.Status.BeingUsed ~= 0
             [DataFolder, DataName, ~] = fileparts(BpodSystem.Path.CurrentDataFile);
             NidaqDataFolder = [DataFolder, '\', DataName];
             if ~isdir(NidaqDataFolder)
@@ -115,7 +112,7 @@ while RunSession
     end
     
     % pause conditions    
-    HandlePauseCondition; % Checks to see if the protocol is paused. If so, waits until user resumes.
+    HandlePauseCondition;
     
     if BpodSystem.Status.BeingUsed == 0
         return
@@ -124,13 +121,12 @@ while RunSession
     if (BpodSystem.Data.TrialStartTimestamp(iTrial) - BpodSystem.Data.TrialStartTimestamp(1))/60 > TaskParameters.GUI.MaxSessionTime
         TaskParameters.GUI.MaxSessionTime = 1000;
         try
-            Notify() % optional notify sript in your MATLAB path (not part of protocol)
+            Notify()
         catch
         end
         RunProtocol('StartPause')
     end
             
-    
     % update hidden TaskParameter fields
     TaskParameters.Figures.OutcomePlot.Position = BpodSystem.ProtocolFigures.SideOutcomePlotFig.Position;
     TaskParameters.Figures.ParameterGUI.Position = BpodSystem.ProtocolFigures.ParameterGUI.Position;
@@ -150,4 +146,4 @@ if TaskParameters.GUI.Photometry
     CheckPhotometry(PhotoData, Photo2Data);
 end
 
-end %DiscriminationBlocks()
+end %DiscriminationRandomWalk()

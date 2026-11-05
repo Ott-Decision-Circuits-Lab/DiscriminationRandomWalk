@@ -9,9 +9,6 @@ if isempty(fieldnames(TaskParameters))
     TaskParameters.GUIMeta.EphysSession.Style = 'checkbox';
     TaskParameters.GUI.PharmacologyOn = false;
     TaskParameters.GUIMeta.PharmacologyOn.Style = 'checkbox';
-    TaskParameters.GUI.RandomizeBiasBlocks = false;
-    TaskParameters.GUIMeta.RandomizeBiasBlocks.Style = 'checkbox';
-    TaskParameters.GUIMeta.RandomizeBiasBlocks.String = 'Randomize blocks 2 and 3';
     TaskParameters.GUI.SessionDescription = 'abc';
     TaskParameters.GUIMeta.SessionDescription.Style = 'edittext';
     TaskParameters.GUI.ITI = 1; 
@@ -93,11 +90,6 @@ if isempty(fieldnames(TaskParameters))
     TaskParameters.GUI.OdorB_bank = 4;
     TaskParameters.GUIPanels.Olfactometer = {'OdorA_bank', 'OdorB_bank'};
     
-%     TaskParameters.GUI.OdorSettings = 0;
-%     TaskParameters.GUIMeta.OdorSettings.Style = 'pushbutton';
-%     TaskParameters.GUIMeta.OdorSettings.String = 'Odor settings';
-%     TaskParameters.GUIMeta.OdorSettings.Callback = @GUIOdorSettings;
-    
     TaskParameters.GUI.OdorTable.OdorFracA = 50+[-1; 1]*round(logspace(log10(6),log10(90),3)/2);
     TaskParameters.GUI.OdorTable.OdorFracA = sort(TaskParameters.GUI.OdorTable.OdorFracA(:));
     TaskParameters.GUI.OdorTable.OdorFracA = [5, 30, 45, 55, 70, 95]';
@@ -152,16 +144,19 @@ if isempty(fieldnames(TaskParameters))
     TaskParameters.GUIPanels.AudFreqLevels = {'Aud_Levels'};
     TaskParameters.GUIPanels.AudMinSample= {'MinSampleAudMin','MinSampleAudMax','MinSampleAudAutoincrement','MinSampleAudIncr','MinSampleAudDecr','MinSampleAud'};
     
-    %% Block structure
-    TaskParameters.GUI.BlockTable.BlockNumber = [1, 2, 3, 4]';
-    TaskParameters.GUI.BlockTable.BlockLen = ones(4,1)*5000;
-    TaskParameters.GUI.BlockTable.AudLeftBias = [0.5, 0.7, 0.3, 0.5]';  % Left bias per block
-    %TaskParameters.GUI.BlockTable.RewL = [1 randsample([1 .6],2) 1]';
-    %TaskParameters.GUI.BlockTable.RewR = flipud(TaskParameters.GUI.BlockTable.RewL);
-    TaskParameters.GUIMeta.BlockTable.Style = 'table';
-    TaskParameters.GUIMeta.BlockTable.String = 'Block structure';
-    TaskParameters.GUIMeta.BlockTable.ColumnLabel = {'Block#','Block Length','Aud Left Bias'};
-    TaskParameters.GUIPanels.BlockStructure = {'BlockTable', 'RandomizeBiasBlocks'};
+    %% Random Walk Structure (Ornstein-Uhlenbeck)
+    % Sigma: standard deviation of Gaussian noise (controls exploration range)
+    % Kappa: pull strength toward 0.5 (controls reversion speed)
+    % Init: initial log-odds value (0 = p=0.5)
+    % Bounds: hard clamp limits in logit space (prevents extreme values)
+    TaskParameters.GUI.RandomWalkSigma = 0.1;
+    TaskParameters.GUI.RandomWalkKappa = 0.05;
+    TaskParameters.GUI.RandomWalkInit = 0;
+    TaskParameters.GUI.RandomWalkBounds = 1.5;  % +/- in logit space (~0.82 to 0.18)
+    TaskParameters.GUI.RandomWalkAutoReset = false;
+    TaskParameters.GUIMeta.RandomWalkAutoReset.Style = 'checkbox';
+    TaskParameters.GUIMeta.RandomWalkAutoReset.String = 'Reset to 0.5 on miss';
+    TaskParameters.GUIPanels.RandomWalk = {'RandomWalkSigma','RandomWalkKappa','RandomWalkInit','RandomWalkBounds','RandomWalkAutoReset'};
     
     %% Plots
     %Show Plots
@@ -294,7 +289,7 @@ if isempty(fieldnames(TaskParameters))
     TaskParameters.GUI = orderfields(TaskParameters.GUI);
     %% Tabs
     TaskParameters.GUITabs.General = {'General','StimDelay','BiasControl','FeedbackDelay'};
-    TaskParameters.GUITabs.Block = {'BlockStructure'};
+    TaskParameters.GUITabs.RandomWalk = {'RandomWalk'};
     TaskParameters.GUITabs.Odor = {'Olfactometer','OlfStimuli'};
     TaskParameters.GUITabs.Auditory = {'AudGeneral','AudMinSample','AudClicks','AudFreq','AudFreqLevels'};
     TaskParameters.GUITabs.Plots = {'ShowPlots','Vevaiometric'};
@@ -304,7 +299,7 @@ if isempty(fieldnames(TaskParameters))
     
     % Reorder tabs for clarity
     TaskParameters.GUITabs = orderfields(TaskParameters.GUITabs, ...
-        {'General', 'Block', 'Odor', 'Auditory', 'Plots', 'Laser', 'Video', 'Photometry'});
+        {'General', 'RandomWalk', 'Odor', 'Auditory', 'Plots', 'Laser', 'Video', 'Photometry'});
     
     %%Non-GUI Parameters (but saved)
     % Setting TaskParameters.Figures.ParameterGUI.Position causes GUI
